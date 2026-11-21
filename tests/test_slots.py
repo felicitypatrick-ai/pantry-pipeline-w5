@@ -3,6 +3,7 @@ import unittest
 from app.slots import can_book, slots_left
 
 
+# Checked on every change.
 class SlotTests(unittest.TestCase):
     def test_slots_left_counts_open_slots(self):
         self.assertEqual(slots_left(20, 15), 5)
