@@ -1,0 +1,92 @@
+name: Deliver
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: [ "VERSION" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run the tests
+        shell: bash
+        run: python -m unittest discover -s tests -v 2>&1 | tee test-report.txt
+      - name: Build the package
+        run: |
+          mkdir -p dist
+          cp app/*.py VERSION dist/
+      - name: Save the tested package
+        uses: actions/upload-artifact@v4
+        with:
+          name: pantry-app
+          path: dist/
+  deploy-staging:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Get the tested package
+        uses: actions/download-artifact@v4
+        with:
+          name: pantry-app
+          path: release/
+      - name: Deploy to staging
+        shell: bash
+        run: |
+          echo "Deployed to staging: version $(cat release/VERSION), commit $(git rev-parse --short=7 HEAD)" > release/RELEASE.txt
+      - name: Save the staging release
+        uses: actions/upload-artifact@v4
+        with:
+          name: pantry-staging
+          path: release/
+      - name: Check the release
+        shell: bash
+        run: |
+          python scripts/release_check.py release staging | tee release-check.txt
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat release-check.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Get the tested package
+        uses: actions/download-artifact@v4
+        with:
+          name: pantry-app
+          path: release/
+      - name: Deploy to production
+        shell: bash
+        run: |
+          echo "Deployed to production: version $(cat release/VERSION), commit $(git rev-parse --short=7 HEAD)" > release/RELEASE.txt
+      - name: Save the production release
+        uses: actions/upload-artifact@v4
+        with:
+          name: pantry-production
+          path: release/
+          overwrite: true  # a rollback re-run saves this release again
+      - name: Check the release
+        shell: bash
+        run: |
+          python scripts/release_check.py release production | tee release-check.txt
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          cat release-check.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
