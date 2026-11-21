@@ -24,6 +24,10 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat test-report.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Check the open slots
+        run: python scripts/signup_check.py slots
+      - name: Check the waitlist
+        run: python scripts/signup_check.py waitlist
       - name: Build the package
         run: |
           mkdir -p dist
