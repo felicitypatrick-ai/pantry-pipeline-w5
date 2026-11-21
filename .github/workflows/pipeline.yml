@@ -42,7 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        part: [ slots, wait-list ]
+        part: [ slots, waitlist ]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
